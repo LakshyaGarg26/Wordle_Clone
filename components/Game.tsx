@@ -15,7 +15,9 @@ const Game: React.FC = () => {
   const [currentAttempt, setCurrentAttempt] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [disabledKeys, setDisabledKeys] = useState<Set<string>>(new Set());
+  const [correctLetters, setCorrectLetters] = useState<Set<string>>(new Set());
+  const [presentLetters, setPresentLetters] = useState<Set<string>>(new Set());
+  const [absentLetters, setAbsentLetters] = useState<Set<string>>(new Set());
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -99,14 +101,24 @@ const Game: React.FC = () => {
       newGuesses[currentAttempt] = guessString;
       setGuesses(newGuesses);
 
-      // Update disabled keys
-      const newDisabledKeys = new Set(disabledKeys);
+      // Update letter sets
+      const newCorrectLetters = new Set(correctLetters);
+      const newPresentLetters = new Set(presentLetters);
+      const newAbsentLetters = new Set(absentLetters);
+
       guessString.split('').forEach((letter, idx) => {
-        if (!targetWord.includes(letter)) {
-          newDisabledKeys.add(letter);
+        if (targetWord[idx] === letter) {
+          newCorrectLetters.add(letter);
+        } else if (targetWord.includes(letter)) {
+          newPresentLetters.add(letter);
+        } else {
+          newAbsentLetters.add(letter);
         }
       });
-      setDisabledKeys(newDisabledKeys);
+
+      setCorrectLetters(newCorrectLetters);
+      setPresentLetters(newPresentLetters);
+      setAbsentLetters(newAbsentLetters);
 
       if (guessString === targetWord) {
         setGameOver(true);
@@ -139,16 +151,16 @@ const Game: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'}`}>
       <Header title="Welcome to Wordle" />
       <ToggleButton darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-      <main className="flex flex-col items-center">
+      <main className="flex flex-col items-center w-full">
         {guesses.map((guess, attempt) => (
-          <div key={attempt} className="grid grid-cols-5 gap-4 mb-4">
+          <div key={attempt} className="grid grid-cols-5 gap-2 mb-2 md:gap-4 md:mb-4">
             {Array.from({ length: WORD_LENGTH }).map((_, index) => (
               <div
                 key={index}
-                className={`w-14 h-14 border-2 flex items-center justify-center text-2xl font-bold ${getLetterClass(guess[index], index, attempt)}`}
+                className={`w-10 h-10 md:w-14 md:h-14 border-2 flex items-center justify-center text-xl md:text-2xl font-bold ${getLetterClass(guess[index], index, attempt)}`}
               >
                 {guess[index]}
               </div>
@@ -156,7 +168,7 @@ const Game: React.FC = () => {
           </div>
         ))}
         {!gameOver && (
-          <div className="grid grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-5 gap-2 mb-2 md:gap-4 md:mb-4">
             {currentGuess.map((letter, index) => (
               <input
                 key={index}
@@ -168,19 +180,27 @@ const Game: React.FC = () => {
                 onChange={(e) => handleInputChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 maxLength={1}
-                className={`w-14 h-14 border-2 text-center text-2xl font-bold ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
+                className={`w-10 h-10 md:w-14 md:h-14 border-2 text-center text-xl md:text-2xl font-bold ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-black'}`}
                 disabled={gameOver}
+                onFocus={(e) => e.preventDefault()}
               />
             ))}
           </div>
         )}
         {gameOver && (
-          <div className="text-2xl font-bold mb-4">
+          <div className="text-xl md:text-2xl font-bold mb-2 md:mb-4">
             {guesses[currentAttempt] === targetWord ? 'Congratulations!' : `Game Over! The word was ${targetWord}`}
           </div>
         )}
         <GameControls handleSubmit={handleSubmit} gameOver={gameOver} handleRestart={handleRestart} />
-        {!gameOver && <Keyboard onKeyPress={handleKeyPress} disabledKeys={disabledKeys} />}
+        {!gameOver && (
+          <Keyboard 
+            onKeyPress={handleKeyPress} 
+            correctLetters={correctLetters} 
+            presentLetters={presentLetters} 
+            absentLetters={absentLetters} 
+          />
+        )}
       </main>
     </div>
   );
